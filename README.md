@@ -1,5 +1,12 @@
 # Rates & FX Pricing, Curves & Risk Analytics (Python)
 
+**[▶ Launch the interactive Streamlit demo](https://rates-fx-pricing-curves-risk-6hx3wfscdqqjdeqqbm22mw.streamlit.app)** — try the dashboard in your browser, no Python installation needed.
+
+**Explore:** [Python source](src/) · [Streamlit app code](app.py) · [Unit tests](tests/) · [Chart preview](assets/zero-curve-preview.png) · [Run instructions](#run)
+
+*The default example uses synthetic inputs; this is educational research, not live trading or an investment recommendation.*
+
+
 **Front-office-oriented analytics**: bootstrap annual-pay **par swap** curve discount factors and continuously compounded zero rates; reprice par swaps; mark fixed-rate bonds and calculate symmetric DV01; mark simplified receive-fixed swaps; apply covered interest parity to EUR/USD forward rates and mark-to-market; examine interest-rate / FX stress scenarios.
 
 ![Illustrative research preview](assets/zero-curve-preview.png)
