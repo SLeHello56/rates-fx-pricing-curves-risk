@@ -1,0 +1,38 @@
+import streamlit as st
+import pandas as pd
+from rates_fx.analytics import (illustrative_curve,bootstrap_annual_par_swaps,swap_par_rate,bond_pv,bond_dv01,receive_fixed_swap_pv,fx_forward,long_fx_forward_pv,scenario_table)
+from rates_fx.historical import fetch_ecb_eurusd,fetch_fred_us_treasury
+st.set_page_config(page_title='Rates & FX Risk Lab',layout='wide')
+st.title('Rates & FX Pricing, Curves & Risk')
+st.caption('Illustrative annual par swap curve; separate ECB FX and US Treasury public history available as context.')
+input_csv=st.file_uploader('Upload annual par swap rates: year,par_rate (decimal)',type=['csv'])
+if input_csv:
+    user=pd.read_csv(input_csv).sort_values('year')
+    if not user.year.tolist()==list(range(1,len(user)+1)):st.error('Need consecutive annual nodes starting at 1');st.stop()
+    curve=bootstrap_annual_par_swaps(user.par_rate)
+else:curve=illustrative_curve()
+st.subheader('Bootstrap zero curve')
+st.line_chart(curve.set_index('year')[['par_rate','cont_zero_rate']])
+st.dataframe(curve,hide_index=True)
+notional=st.number_input('Notional',min_value=1_000.0,value=1_000_000.0,step=100_000.0)
+maturity=st.slider('Bond maturity (years)',1,len(curve),min(5,len(curve)))
+coupon=st.number_input('Bond coupon / swap fixed rate (decimal)',value=.03,step=.005,format='%.4f')
+a,b,c=st.columns(3)
+a.metric('Bond PV',f'{bond_pv(curve,maturity,coupon,notional):,.2f}')
+b.metric('Bond DV01 (quote ccys per bp)',f'{bond_dv01(curve,maturity,coupon,notional):,.2f}')
+c.metric('Receive-fixed swap PV',f'{receive_fixed_swap_pv(curve,coupon,notional):,.2f}')
+st.caption(f'Full tenor illustrative par swap rate: {swap_par_rate(curve.discount_factor):.2%}')
+st.subheader('EUR/USD forward and mark-to-market')
+s=st.number_input('EUR/USD spot (USD per EUR)',min_value=.01,value=1.10)
+eur=st.number_input('EUR continuously compounded rate',value=.02,format='%.4f')
+usd=st.number_input('USD continuously compounded rate',value=.04,format='%.4f')
+f=fx_forward(s,1,eur,usd)
+st.metric('1-year theoretical forward (USD/EUR)',f'{f:.5f}')
+st.metric('Long EUR forward PV (USD, K=spot)',f'{long_fx_forward_pv(s,s,1,eur,usd,notional):,.2f}')
+st.dataframe(scenario_table(curve,s,coupon,s,eur,usd).set_index('scenario'))
+if st.checkbox('View optional historical ECB FX / US Treasury data (internet required)'):
+    try:
+        ecb=fetch_ecb_eurusd();us=fetch_fred_us_treasury()
+        st.subheader('ECB USD per EUR (fixing)');st.line_chart(ecb.set_index('date').eurusd)
+        st.subheader('US Treasury 10y yield (%) — NOT swap/OIS discount curve');st.line_chart(us.set_index('date').yield_percent)
+    except Exception as ex:st.warning(f'Historical fetch failed: {ex}')
